@@ -4,7 +4,7 @@ cb.payment_token
 ,cb.user_token
 ,cb.currency_code
 ,to_date(cb.payment_created_at) payment_dt
-,rule_name
+--,rule_name
 ,case when rule_category = 'backstop' then 1 else 0 end as backstop_flag
 ,case when rule_category = 'heuristic' then 1 else 0 end as heuristic_flag
 ,lt.business_category as MCC
@@ -58,9 +58,9 @@ left join (select -- find model flagged payments
 distinct cb.user_token
 ,payment_token
 ,to_date(cb.payment_created_at) as payment_dt
-, cr.rule_name
+--, cr.rule_name
 ,rule_category
-,row_number() over (partition by payment_token,payment_dt order by cr.rule_name) as pmt_row_num -- count for multiple flagging rules for same payment_token
+,row_number() over (partition by payment_token,payment_dt order by rule_category) as pmt_row_num -- count for multiple flagging rules for same payment_token
 ,MAX(case when cr.user_token is not null THEN 1 else 0 END) AS model_flag
 from app_risk.app_risk.chargebacks cb
 left join creditactions.RAW_OLTP.CREDIT_RISK_RULE_RESULTS AS cr
@@ -77,7 +77,7 @@ and active = TRUE
 and to_timestamp(effective_at/1000) < current_date() -- can add time frame as well, i.e. >= xxxx-xx-xx and < xxxx-xx-xx
 and create_suspicions = TRUE)
 and active = true) */
-GROUP BY 1,2,3,4,5) cr
+GROUP BY 1,2,3,4) cr
 on cr.payment_token = cb.payment_token
 where cb.reason_code_type = 'credit' and cb.payment_created_at >= '2020-07-01' and cb.CURRENCY_CODE = 'USD' and chargeback_dllr>100 and gpv_t90d > 25000
 ;
