@@ -32,8 +32,10 @@ SELECT
          WHERE sds.currency_code = 'USD' AND sds.payment_trx_recognized_date >= '2020-01-01'
          GROUP BY 1,2,3,4,5) gpv
          LEFT OUTER JOIN 
-         APP_RISK.APP_RISK.chargebacks AS cb  ON gpv.user_token = cb.user_token AND to_date(cb.payment_created_at) = gpv.payment_trx_recognized_date
-        AND cb.type = 'credit' AND cb.chargeback_cents > 10000
-        --AND cb.status = 'LOST' AND cb.is_protected = 0 
+         (select distinct user_token, payment_created_at,sum(chargeback_cents) as chargeback_cents, sum(loss_cents) as loss_cents
+          from APP_RISK.APP_RISK.chargebacks
+          where type = 'credit' AND chargeback_cents > 10000
+          --AND status = 'LOST' AND is_protected = 0 
+         group by 1,2) AS cb  ON gpv.user_token = cb.user_token AND to_date(cb.payment_created_at) = gpv.payment_trx_recognized_date
         WHERE rule_name is not null
 ;
